@@ -1,0 +1,14 @@
+# Database Configuration
+# รูปแบบ: postgresql://username:password@host:port/database
+# 
+# หมายเหตุ:
+# - ถ้า password มีอักขระพิเศษ (@, :, /, #) ให้ใช้ URL encoding
+#   ตัวอย่าง: @ = %40, : = %3A, / = %2F, # = %23
+# - ถ้าใช้ localhost: postgresql://user:pass@localhost:5432/dbname
+# - ถ้าใช้ remote server: postgresql://user:pass@192.168.1.100:5432/dbname
+#
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/dog_recognition_db
+
+# Application Settings
+TOLERANCE=0.6
+

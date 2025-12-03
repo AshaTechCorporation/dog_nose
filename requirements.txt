@@ -1,0 +1,11 @@
+numpy
+opencv-python
+fastapi
+uvicorn[standard]
+python-multipart
+Pillow
+sqlalchemy
+psycopg2-binary
+python-dotenv
+
+
