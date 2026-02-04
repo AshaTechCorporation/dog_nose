@@ -48,22 +48,53 @@ Base = declarative_base()
 
 class Dog(Base):
     """
-    Model สำหรับเก็บข้อมูลหมาที่ลงทะเบียนไว้
+    Model สำหรับเก็บข้อมูลสัตว์เลี้ยง (หมา/แมว) ที่ลงทะเบียนไว้
     """
     __tablename__ = "dogs"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, unique=True, index=True, nullable=False, comment="ชื่อของหมา")
+    name = Column(String(255), unique=True, index=True, nullable=False, comment="ชื่อของสัตว์เลี้ยง")
     average_embedding = Column(LargeBinary, nullable=False, comment="Average embedding (pickled numpy array)")
     tolerance = Column(Float, default=0.6, nullable=False, comment="เกณฑ์ความคลาดเคลื่อน")
     num_images = Column(Integer, default=0, nullable=False, comment="จำนวนรูปภาพที่ใช้ในการลงทะเบียน")
+    # ฟิลด์ข้อมูลเพิ่มเติม
+    type = Column(String(50), nullable=True, comment="ประเภทสัตว์ (เช่น หมา, แมว)")
+    breed = Column(String(100), nullable=True, comment="สายพันธุ์")
+    eye_color = Column(String(50), nullable=True, comment="สีตา")
+    fur_color = Column(String(100), nullable=True, comment="สีขน")
+    special_characteristics = Column(String(255), nullable=True, comment="ลักษณะเด่นพิเศษ")
+    birth_date = Column(String(10), nullable=True, comment="วันเกิด (YYYY-MM-DD)")
+    gender = Column(String(20), nullable=True, comment="เพศ (male/female)")
+    weight = Column(Integer, nullable=True, comment="น้ำหนัก")
+    description = Column(String(500), nullable=True, comment="รายละเอียดเพิ่มเติม")
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, comment="วันที่สร้าง")
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False, comment="วันที่อัปเดตล่าสุด")
 
 
+def _migrate_add_columns(conn):
+    """เพิ่มคอลัมน์ใหม่ให้ตาราง dogs ที่มีอยู่แล้ว (สำหรับ database ที่สร้างมาก่อน)"""
+    new_columns = [
+        ("type", "VARCHAR(50)"),
+        ("breed", "VARCHAR(100)"),
+        ("eye_color", "VARCHAR(50)"),
+        ("fur_color", "VARCHAR(100)"),
+        ("special_characteristics", "VARCHAR(255)"),
+        ("birth_date", "VARCHAR(10)"),
+        ("gender", "VARCHAR(20)"),
+        ("weight", "INTEGER"),
+        ("description", "VARCHAR(500)"),
+    ]
+    for col_name, col_type in new_columns:
+        try:
+            conn.execute(text(f'ALTER TABLE dogs ADD COLUMN IF NOT EXISTS "{col_name}" {col_type}'))
+        except Exception as e:
+            if "already exists" not in str(e).lower():
+                print(f"⚠️ Migration column {col_name}: {e}")
+
+
 def init_db():
     """
-    สร้างตารางใน database (ถ้ายังไม่มี)
+    สร้างตารางใน database (ถ้ายังไม่มี) และ migrate คอลัมน์ใหม่
     """
     try:
         # ทดสอบการเชื่อมต่อ database ก่อน
@@ -72,6 +103,11 @@ def init_db():
         
         # สร้างตาราง
         Base.metadata.create_all(bind=engine)
+        
+        # Migrate: เพิ่มคอลัมน์ใหม่สำหรับ database ที่มีอยู่แล้ว
+        with engine.begin() as conn:
+            _migrate_add_columns(conn)
+        
         print("✅ Database tables created/verified successfully")
     except Exception as e:
         error_msg = str(e)

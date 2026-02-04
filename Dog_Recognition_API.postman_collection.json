@@ -16,15 +16,69 @@
 					"formdata": [
 						{
 							"key": "name",
-							"value": "หมาเตย",
+							"value": "น้องแมว",
 							"type": "text",
-							"description": "ชื่อของหมาที่ต้องการลงทะเบียน"
+							"description": "ชื่อของสัตว์เลี้ยงที่ต้องการลงทะเบียน"
+						},
+						{
+							"key": "type",
+							"value": "แมว",
+							"type": "text",
+							"description": "ประเภทสัตว์ (เช่น หมา, แมว)"
+						},
+						{
+							"key": "breed",
+							"value": "บ๊อบเทล",
+							"type": "text",
+							"description": "สายพันธุ์"
+						},
+						{
+							"key": "eye_color",
+							"value": "เหลือง",
+							"type": "text",
+							"description": "สีตา"
+						},
+						{
+							"key": "fur_color",
+							"value": "ขาวลายดำ",
+							"type": "text",
+							"description": "สีขน"
+						},
+						{
+							"key": "special_characteristics",
+							"value": "มีจุดที่หางสีดำ",
+							"type": "text",
+							"description": "ลักษณะเด่นพิเศษ"
+						},
+						{
+							"key": "birth_date",
+							"value": "2023-04-28",
+							"type": "text",
+							"description": "วันเกิด (YYYY-MM-DD)"
+						},
+						{
+							"key": "gender",
+							"value": "female",
+							"type": "text",
+							"description": "เพศ (male/female)"
+						},
+						{
+							"key": "weight",
+							"value": "20",
+							"type": "text",
+							"description": "น้ำหนัก (หน่วย: ตามที่ใช้)"
+						},
+						{
+							"key": "description",
+							"value": "My first cat which was gifted by my mother for my 20th birthday.",
+							"type": "text",
+							"description": "รายละเอียดเพิ่มเติม"
 						},
 						{
 							"key": "images",
 							"type": "file",
 							"src": [],
-							"description": "รูปภาพที่ 1 - ควรมีหมาชัดเจน"
+							"description": "รูปภาพที่ 1 - ควรมีสัตว์เลี้ยงชัดเจน"
 						},
 						{
 							"key": "images",
@@ -54,7 +108,7 @@
 						"enroll"
 					]
 				},
-				"description": "ลงทะเบียนหมาตัวใหม่ด้วยรูปภาพหลายรูป (ไม่จำกัดจำนวน)\n\n**Parameters:**\n- `name`: ชื่อของหมา (required)\n- `images`: รูปภาพหลายรูป (required, อย่างน้อย 1 รูป)\n\n**Response:**\n- `success`: true/false\n- `message`: ข้อความผลลัพธ์\n- `name`: ชื่อของหมา\n- `num_images_processed`: จำนวนรูปภาพที่ประมวลผล\n- `warnings`: รายการ warnings (ถ้ามี)\n\n**Note:**\n- สามารถเพิ่มรูปภาพได้หลายรูปโดยเพิ่ม field `images` หลายตัว\n- ยิ่งใช้รูปภาพมาก ยิ่งแม่นยำมากขึ้น"
+				"description": "ลงทะเบียนสัตว์เลี้ยงตัวใหม่ด้วยรูปภาพหลายรูป\n\n**Parameters (บังคับ):**\n- `name`: ชื่อของสัตว์เลี้ยง\n- `images`: รูปภาพหลายรูป (อย่างน้อย 1 รูป)\n\n**Parameters (ไม่บังคับ):**\n- `type`: ประเภทสัตว์ (หมา, แมว)\n- `breed`: สายพันธุ์\n- `eye_color`: สีตา\n- `fur_color`: สีขน\n- `special_characteristics`: ลักษณะเด่นพิเศษ\n- `birth_date`: วันเกิด (YYYY-MM-DD)\n- `gender`: เพศ (male/female)\n- `weight`: น้ำหนัก\n- `description`: รายละเอียดเพิ่มเติม\n\n**Response:**\n- `success`: true/false\n- `message`: ข้อความผลลัพธ์\n- `name`: ชื่อสัตว์เลี้ยง\n- `num_images_processed`: จำนวนรูปภาพที่ประมวลผล\n- `warnings`: รายการ warnings (ถ้ามี)"
 			},
 			"response": []
 		},
@@ -88,7 +142,7 @@
 						"recognize"
 					]
 				},
-				"description": "ตรวจสอบหมาจากรูปภาพที่อัปโหลด\n\n**Parameters:**\n- `image`: รูปภาพที่ต้องการตรวจสอบ (required)\n\n**Response:**\n- `success`: true/false\n- `found`: true/false (พบหมาที่ตรงกันหรือไม่)\n- `person`: ข้อมูลหมาที่พบ (ถ้า found = true)\n  - `name`: ชื่อของหมา\n  - `distance`: ระยะทาง (น้อย = ใกล้เคียงมาก)\n  - `tolerance`: เกณฑ์ความคลาดเคลื่อน\n  - `confidence`: ความเหมือนในรูปเปอร์เซ็นต์\n- `all_comparisons`: รายการการเปรียบเทียบทั้งหมด\n\n**Note:**\n- ระบบจะค้นหาในฐานข้อมูลที่ลงทะเบียนไว้ทั้งหมด\n- ถ้า confidence > 85% จะถือว่าพบหมาที่ตรงกัน"
+				"description": "ตรวจสอบสัตว์เลี้ยงจากรูปภาพที่อัปโหลด\n\n**Parameters:**\n- `image`: รูปภาพที่ต้องการตรวจสอบ (required)\n\n**Response:**\n- `success`: true/false\n- `found`: true/false (พบสัตว์เลี้ยงที่ตรงกันหรือไม่)\n- `person`: ข้อมูลที่พบ (name, distance, tolerance, confidence, type, breed, eye_color, fur_color, special_characteristics, birth_date, gender, weight, description)\n- `all_comparisons`: รายการการเปรียบเทียบทั้งหมด\n\n**Note:** confidence > 85% ถือว่าพบสัตว์เลี้ยงที่ตรงกัน"
 			},
 			"response": []
 		},
@@ -106,7 +160,7 @@
 						"persons"
 					]
 				},
-				"description": "แสดงรายชื่อหมาทั้งหมดที่ลงทะเบียนไว้ในฐานข้อมูล\n\n**Response:**\n- `success`: true/false\n- `total`: จำนวนหมาทั้งหมด\n- `persons`: รายการหมาทั้งหมด\n  - `id`: ID ของหมา\n  - `name`: ชื่อของหมา\n  - `num_images`: จำนวนรูปภาพที่ใช้ในการลงทะเบียน\n  - `tolerance`: เกณฑ์ความคลาดเคลื่อน\n  - `created_at`: วันที่สร้าง\n  - `updated_at`: วันที่อัปเดตล่าสุด"
+				"description": "แสดงรายชื่อสัตว์เลี้ยงทั้งหมดที่ลงทะเบียนไว้ในฐานข้อมูล\n\n**Response:**\n- `success`: true/false\n- `total`: จำนวนทั้งหมด\n- `persons`: รายการสัตว์เลี้ยง (id, name, num_images, tolerance, type, breed, eye_color, fur_color, special_characteristics, birth_date, gender, weight, description, created_at, updated_at)"
 			},
 			"response": []
 		},

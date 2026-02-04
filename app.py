@@ -319,18 +319,33 @@ def load_person_embedding(db: Session, person_name: str):
     except Exception as e:
         return None
 
-def enroll_person(db: Session, person_name: str, image_bytes_list: List[bytes]):
+def enroll_person(
+    db: Session,
+    person_name: str,
+    image_bytes_list: List[bytes],
+    animal_type: Optional[str] = None,
+    breed: Optional[str] = None,
+    eye_color: Optional[str] = None,
+    fur_color: Optional[str] = None,
+    special_characteristics: Optional[str] = None,
+    birth_date: Optional[str] = None,
+    gender: Optional[str] = None,
+    weight: Optional[int] = None,
+    description: Optional[str] = None,
+):
     """
-    ลงทะเบียนหมาตัวใหม่ - หลักการเหมือนบันทึกลายนิ้วมือ
+    ลงทะเบียนสัตว์เลี้ยงตัวใหม่ - หลักการเหมือนบันทึกลายนิ้วมือ
     
     ขั้นตอน:
     1. เอารูปแต่ละรูปมาแปลงเป็น "ข้อมูลลายนิ้วมือ" (embedding/features)
-    2. นำข้อมูลทั้งหมดมาหาค่าเฉลี่ย เพื่อให้ได้ "ลายนิ้วมือ" ตัวแทนของหมาตัวนี้
-    3. เก็บข้อมูลนี้ไว้ในไฟล์ .pkl (เหมือนเก็บลายนิ้วมือในฐานข้อมูล)
+    2. นำข้อมูลทั้งหมดมาหาค่าเฉลี่ย เพื่อให้ได้ "ลายนิ้วมือ" ตัวแทน
+    3. เก็บข้อมูลลง database
     
     Args:
-        person_name: ชื่อของหมา
+        person_name: ชื่อของสัตว์เลี้ยง
         image_bytes_list: รายการรูปภาพ (bytes) ที่ต้องการลงทะเบียน
+        animal_type, breed, eye_color, fur_color, special_characteristics,
+        birth_date, gender, weight, description: ข้อมูลเพิ่มเติม (optional)
     
     Returns:
         success: ว่าบันทึกสำเร็จหรือไม่
@@ -380,11 +395,25 @@ def enroll_person(db: Session, person_name: str, image_bytes_list: List[bytes]):
     # ตรวจสอบว่ามีหมาตัวนี้อยู่แล้วหรือไม่
     existing_dog = db.query(Dog).filter(Dog.name == person_name).first()
     
+    extra_data = {
+        "type": animal_type or None,
+        "breed": breed or None,
+        "eye_color": eye_color or None,
+        "fur_color": fur_color or None,
+        "special_characteristics": special_characteristics or None,
+        "birth_date": birth_date or None,
+        "gender": gender or None,
+        "weight": weight,
+        "description": description or None,
+    }
+
     if existing_dog:
         # อัปเดตข้อมูลที่มีอยู่
         existing_dog.average_embedding = serialize_embedding(average_embedding)
         existing_dog.tolerance = TOLERANCE
         existing_dog.num_images = len(all_embeddings)
+        for key, val in extra_data.items():
+            setattr(existing_dog, key, val)
         db.commit()
         db.refresh(existing_dog)
         return True, f"อัปเดตข้อมูลสำเร็จ: {person_name}", errors
@@ -394,7 +423,8 @@ def enroll_person(db: Session, person_name: str, image_bytes_list: List[bytes]):
             name=person_name,
             average_embedding=serialize_embedding(average_embedding),
             tolerance=TOLERANCE,
-            num_images=len(all_embeddings)
+            num_images=len(all_embeddings),
+            **extra_data
         )
         db.add(new_dog)
         db.commit()
@@ -432,7 +462,7 @@ def verify_face(known_average_embedding, unknown_embedding, tolerance):
 
 def find_all_enrolled_persons(db: Session):
     """
-    หาหมาทั้งหมดที่ลงทะเบียนไว้จาก database
+    หาสัตว์เลี้ยงทั้งหมดที่ลงทะเบียนไว้จาก database
     """
     dogs = db.query(Dog).all()
     persons = []
@@ -443,7 +473,16 @@ def find_all_enrolled_persons(db: Session):
                 'name': dog.name,
                 'average_embedding': average_embedding,
                 'tolerance': dog.tolerance,
-                'num_images': dog.num_images
+                'num_images': dog.num_images,
+                'type': dog.type,
+                'breed': dog.breed,
+                'eye_color': dog.eye_color,
+                'fur_color': dog.fur_color,
+                'special_characteristics': dog.special_characteristics,
+                'birth_date': dog.birth_date,
+                'gender': dog.gender,
+                'weight': dog.weight,
+                'description': dog.description,
             })
         except Exception as e:
             # ข้ามถ้า deserialize ไม่ได้
@@ -466,18 +505,28 @@ def root():
 @app.post("/enroll")
 async def enroll(
     request: Request,
-    name: str = Form(..., description="ชื่อของหมาที่ต้องการลงทะเบียน"),
-    images: Optional[List[UploadFile]] = File(default=None, description="รูปภาพหลายรูป (ไม่จำกัดจำนวน) - ควรมีหมาชัดเจน"),
+    name: str = Form(..., description="ชื่อของสัตว์เลี้ยงที่ต้องการลงทะเบียน"),
+    images: Optional[List[UploadFile]] = File(default=None, description="รูปภาพหลายรูป (อย่างน้อย 1 รูป) - ควรมีสัตว์เลี้ยงชัดเจน"),
+    animal_type: Optional[str] = Form(None, alias="type", description="ประเภทสัตว์ (เช่น หมา, แมว)", example="แมว"),
+    breed: Optional[str] = Form(None, description="สายพันธุ์", example="บ๊อบเทล"),
+    eye_color: Optional[str] = Form(None, description="สีตา", example="เหลือง"),
+    fur_color: Optional[str] = Form(None, description="สีขน", example="ขาวลายดำ"),
+    special_characteristics: Optional[str] = Form(None, description="ลักษณะเด่นพิเศษ", example="มีจุดที่หางสีดำ"),
+    birth_date: Optional[str] = Form(None, description="วันเกิด (YYYY-MM-DD)", example="2023-04-28"),
+    gender: Optional[str] = Form(None, description="เพศ (male/female)", example="female"),
+    weight: Optional[str] = Form(None, description="น้ำหนัก (ตัวเลข)", example="20"),
+    description: Optional[str] = Form(None, description="รายละเอียดเพิ่มเติม", example="สัตว์เลี้ยงตัวแรก"),
     db: Session = Depends(get_db)
 ):
     """
-    ลงทะเบียนหมาตัวใหม่ด้วยรูปภาพหลายรูป (ไม่จำกัดจำนวน) - ใช้หลักการลายนิ้วมือ
+    ลงทะเบียนสัตว์เลี้ยงตัวใหม่ด้วยรูปภาพหลายรูป - ใช้หลักการลายนิ้วมือ
     
-    - **name**: ชื่อของหมา
-    - **images**: รูปภาพหลายรูป (ไม่จำกัดจำนวน) - ควรมีหมาชัดเจนในแต่ละรูป
-      ใน Swagger UI: คลิก "Add string item" เพื่อเพิ่มไฟล์ใน field "images" (array)
+    - **name**: ชื่อของสัตว์เลี้ยง (บังคับ)
+    - **images**: รูปภาพหลายรูป (บังคับ อย่างน้อย 1 รูป)
+    - **type**, **breed**, **eye_color**, **fur_color**, **special_characteristics**,
+      **birth_date**, **gender**, **weight**, **description**: ข้อมูลเพิ่มเติม (ไม่บังคับ)
     
-    ระบบจะใช้รูปภาพทั้งหมดมาสร้าง "ลายนิ้วมือ" (embedding) เพื่อใช้ในการจดจำ
+    ระบบจะใช้รูปภาพมาสร้าง embedding เพื่อใช้ในการจดจำ
     ยิ่งใช้รูปภาพมาก ยิ่งแม่นยำมากขึ้น
     
     ข้อมูลจะถูกบันทึกลง PostgreSQL database
@@ -621,8 +670,27 @@ async def enroll(
                        f"3. คลิก 'Execute'"
             )
         
+        # แปลง weight เป็น int ถ้ามีค่า
+        weight_int = None
+        if weight and str(weight).strip():
+            try:
+                weight_int = int(float(str(weight).strip()))
+            except (ValueError, TypeError):
+                pass
+
         # ลงทะเบียน
-        success, message, errors = enroll_person(db, name, image_bytes_list)
+        success, message, errors = enroll_person(
+            db, name, image_bytes_list,
+            animal_type=animal_type,
+            breed=breed,
+            eye_color=eye_color,
+            fur_color=fur_color,
+            special_characteristics=special_characteristics,
+            birth_date=birth_date,
+            gender=gender,
+            weight=weight_int,
+            description=description,
+        )
         
         if success:
             return JSONResponse(
@@ -697,14 +765,19 @@ async def recognize(
             # ถ้า distance = tolerance → confidence = 0%
             confidence = max(0, (1 - distance / tolerance) * 100) if tolerance > 0 else 0
             
-            matches.append({
+            match_entry = {
                 "name": person_data['name'],
-                "match": bool(is_match),  # ว่าตรงกันหรือไม่ (แปลงเป็น Python bool)
-                "distance": float(distance),  # ระยะทาง (น้อย = ใกล้เคียงมาก)
+                "match": bool(is_match),
+                "distance": float(distance),
                 "tolerance": float(tolerance),
-                "confidence": confidence,  # ความเหมือนในรูปเปอร์เซ็นต์
+                "confidence": confidence,
                 "num_enrollment_images": person_data['num_images']
-            })
+            }
+            for key in ('type', 'breed', 'eye_color', 'fur_color', 'special_characteristics',
+                        'birth_date', 'gender', 'weight', 'description'):
+                if key in person_data and person_data[key] is not None:
+                    match_entry[key] = person_data[key]
+            matches.append(match_entry)
         
         # ขั้นตอนที่ 4: หา "ลายนิ้วมือ" ที่ใกล้เคียงที่สุด (distance น้อยที่สุด)
         # = หาเป็นหมาตัวไหน และตรวจสอบว่า confidence > 90% หรือไม่
@@ -714,17 +787,23 @@ async def recognize(
         # ถ้า confidence มากกว่า 90% → พบหมาที่ตรงกัน
         # ถ้า confidence ไม่มากกว่า 90% → ไม่พบหมาที่ตรงกัน
         if best_confidence > 85:
+            person_data = {
+                "name": best_match['name'],
+                "distance": best_match['distance'],
+                "tolerance": best_match['tolerance'],
+                "confidence": best_confidence
+            }
+            # เพิ่มข้อมูลเพิ่มเติมจาก database
+            for key in ('type', 'breed', 'eye_color', 'fur_color', 'special_characteristics',
+                        'birth_date', 'gender', 'weight', 'description'):
+                if key in best_match and best_match[key] is not None:
+                    person_data[key] = best_match[key]
             return JSONResponse(
                 status_code=200,
                 content={
                     "success": True,
                     "found": True,
-                    "person": {
-                        "name": best_match['name'],
-                        "distance": best_match['distance'],
-                        "tolerance": best_match['tolerance'],
-                        "confidence": best_confidence
-                    },
+                    "person": person_data,
                     "all_comparisons": matches
                 }
             )
@@ -765,6 +844,15 @@ async def list_persons(db: Session = Depends(get_db)):
                 "name": dog.name,
                 "num_images": dog.num_images,
                 "tolerance": float(dog.tolerance),
+                "type": dog.type,
+                "breed": dog.breed,
+                "eye_color": dog.eye_color,
+                "fur_color": dog.fur_color,
+                "special_characteristics": dog.special_characteristics,
+                "birth_date": dog.birth_date,
+                "gender": dog.gender,
+                "weight": dog.weight,
+                "description": dog.description,
                 "created_at": dog.created_at.isoformat() if dog.created_at else None,
                 "updated_at": dog.updated_at.isoformat() if dog.updated_at else None
             })
